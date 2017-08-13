@@ -19,11 +19,7 @@ export default class SidebarApp extends Component {
      *     <Sidebar isOpen={sidebarIsOpen} />
      *
      *     <View style={styles.screen}>
-     *       <Text>Main Screen</Text>
-     *
      *       <TouchableHighlight
-     *         style={styles.button}
-     *         underlayColor="skyblue"
      *         onPress={() => {
      *           this.setState(state => ({ sidebarIsOpen: !state.sidebarIsOpen }));
      *         }}>

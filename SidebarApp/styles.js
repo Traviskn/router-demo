@@ -24,5 +24,13 @@ export default StyleSheet.create({
   },
   sidebar: {
     backgroundColor: 'black',
+    flexDirection: 'column',
+    justifyContent: 'space-around',
+    position: 'absolute',
+    bottom: 0,
+    top: 0,
+  },
+  menuText: {
+    color: 'white',
   },
 });
