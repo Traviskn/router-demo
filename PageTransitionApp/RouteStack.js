@@ -5,6 +5,14 @@ import { withRouter } from 'react-router-native';
 import styles from './styles';
 
 const { width } = Dimensions.get('window');
+const pushingStyle = {
+  position: 'absolute',
+  top: 0,
+  bottom: 0,
+  left: width,
+  right: -width,
+  backgroundColor: 'white',
+};
 
 class RouteStack extends Component {
   static propTypes = {
@@ -14,17 +22,17 @@ class RouteStack extends Component {
   state = {
     previousChildren: null,
     animation: new Animated.Value(0),
+    transition: null,
   };
 
   componentWillReceiveProps(nextProps) {
-    // console.log('WILL RECEIVE PROPS');
     if (nextProps.location.key !== this.props.location.key) {
-      // console.log('NEW ROUTE!  SAVE THE CHILDREN!');
       const { action } = nextProps.history;
 
       this.setState(
         {
           previousChildren: this.props.children,
+          transition: action,
         },
         () => {
           Animated.timing(this.state.animation, {
@@ -32,6 +40,7 @@ class RouteStack extends Component {
           }).start(() => {
             this.setState({
               previousChildren: null,
+              transition: null,
               animation: new Animated.Value(0),
             });
           });
@@ -41,17 +50,45 @@ class RouteStack extends Component {
   }
 
   render() {
+    const { children } = this.props;
+    const { previousChildren, animation, transition } = this.state;
+    const { stackView } = styles;
+
+    let routes = [];
+    if (transition === 'PUSH') {
+      routes.push(
+        <Animated.View style={stackView}>
+          {previousChildren}
+        </Animated.View>
+      );
+      routes.push(
+        <Animated.View style={[pushingStyle, { transform: [{ translateX: animation }] }]}>
+          {children}
+        </Animated.View>
+      );
+    } else if (transition === 'POP') {
+      routes.push(
+        <Animated.View style={stackView}>
+          {children}
+        </Animated.View>
+      );
+      routes.push(
+        <Animated.View style={[stackView, { transform: [{ translateX: animation }] }]}>
+          {previousChildren}
+        </Animated.View>
+      );
+    } else {
+      return (
+        <View style={stackView}>
+          {children}
+        </View>
+      );
+    }
+
     return (
       <View style={styles.stackView}>
-        <Animated.View style={styles.stackView}>
-          {this.props.children}
-        </Animated.View>
-
-        {this.state.previousChildren &&
-          <Animated.View
-            style={[styles.stackView, { transform: [{ translateX: this.state.animation }] }]}>
-            {this.state.previousChildren}
-          </Animated.View>}
+        {routes[0]}
+        {routes[1]}
       </View>
     );
   }
