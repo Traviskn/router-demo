@@ -6,7 +6,8 @@ export default StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
+    paddingTop: 20,
+    backgroundColor: 'white',
   },
   linkText: {
     color: 'blue',
@@ -19,13 +20,5 @@ export default StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'space-around',
-  },
-  stackView: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    top: 0,
-    backgroundColor: 'white',
   },
 });

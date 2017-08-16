@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { Animated, Dimensions, View } from 'react-native';
-import { withRouter } from 'react-router-native';
+import { Animated, Easing, Dimensions, View } from 'react-native';
 import styles from './styles';
 
 const { width } = Dimensions.get('window');
@@ -12,11 +11,15 @@ const pushingStyle = {
   left: width,
   right: -width,
   backgroundColor: 'white',
+  shadowColor: 'black',
+  shadowOpacity: 1.0,
 };
 
-class RouteStack extends Component {
+export default class StackTransitioner extends Component {
   static propTypes = {
     children: PropTypes.node,
+    location: PropTypes.object,
+    history: PropTypes.object,
   };
 
   state = {
@@ -36,7 +39,10 @@ class RouteStack extends Component {
         },
         () => {
           Animated.timing(this.state.animation, {
+            duration: 500,
             toValue: action === 'PUSH' ? -width : width,
+            easing: Easing.bezier(0.2833, 0.99, 0.31833, 0.99),
+            useNativeDriver: true,
           }).start(() => {
             this.setState({
               previousChildren: null,
@@ -86,12 +92,10 @@ class RouteStack extends Component {
     }
 
     return (
-      <View style={styles.stackView}>
+      <View style={stackView}>
         {routes[0]}
         {routes[1]}
       </View>
     );
   }
 }
-
-export default withRouter(RouteStack);
