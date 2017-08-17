@@ -3,16 +3,17 @@ import PropTypes from 'prop-types';
 import { Animated, Easing, Dimensions, View } from 'react-native';
 import styles from './styles';
 
+// TODO: Add PanResponder to enable navigating back by swiping
+
+// TODO: Add option for a persistent header between routes on the stack
+
+// FIXME: Width could change on rotation
+// width could depend on the layout of the parent view
+// better to get width from a layout event
 const { width } = Dimensions.get('window');
-const pushingStyle = {
-  position: 'absolute',
-  top: 0,
-  bottom: 0,
+const offscreen = {
   left: width,
   right: -width,
-  backgroundColor: 'white',
-  shadowColor: 'black',
-  shadowOpacity: 1.0,
 };
 
 export default class StackTransitioner extends Component {
@@ -38,6 +39,13 @@ export default class StackTransitioner extends Component {
           transition: action,
         },
         () => {
+          // TODO: add more animation options and make animation configurable
+          // - default to platform default (slide ios, fade android)
+          // - base default slide direction on `I18nManager.isRTL`
+          // - fade in from bottom/top
+          // - fade out to bottom/top
+          // - slide in from bottom/top
+          // - slide out to bottom/top
           Animated.timing(this.state.animation, {
             duration: 500,
             toValue: action === 'PUSH' ? -width : width,
@@ -68,7 +76,7 @@ export default class StackTransitioner extends Component {
         </Animated.View>
       );
       routes.push(
-        <Animated.View style={[pushingStyle, { transform: [{ translateX: animation }] }]}>
+        <Animated.View style={[stackView, offscreen, { transform: [{ translateX: animation }] }]}>
           {children}
         </Animated.View>
       );

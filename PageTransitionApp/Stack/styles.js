@@ -9,6 +9,8 @@ export default StyleSheet.create({
     top: 0,
     backgroundColor: 'white',
     shadowColor: 'black',
-    shadowOpacity: 1.0,
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 5,
   },
 });
