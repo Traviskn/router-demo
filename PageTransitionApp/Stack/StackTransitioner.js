@@ -77,36 +77,46 @@ export default class StackTransitioner extends Component {
 
   animation = new Animated.Value(0);
 
+  // maybe store this as transition = 'GESTURE'?  Maybe pull transtion out of state?
   isPanning = false;
 
   panResponder = PanResponder.create({
-    onMoveShouldSetPanResponderCapture: () => {
-      // only capture touches that started near the edge of the screen.
-      // for future animation types like modal or slide-vertical, also
-      // detect the direction of the gesture.
-      return false;
-    },
-
-    onMoveShouldSetPanResponder: () => {
-      // this or the 'Capture' version?
+    onMoveShouldSetPanResponderCapture: (event, gesture) => {
+      return (
+        this.props.history.index > this.startingIndex &&
+        this.props.history.canGo(-1) &&
+        event.nativeEvent.pageX < GESTURE_RESPONSE_DISTANCE_HORIZONTAL &&
+        gesture.dx > RESPOND_THRESHOLD
+      );
     },
 
     onPanResponderGrant: () => {
-      // history.pop()
+      this.isPanning = true;
+      this.props.history.goBack();
       // save children
     },
 
-    onPanResponderMove: () => {
-      // Animated.Event?
-      // use I18nManager.isRTL to determine which side of the screen to measure
-      // from.
-    },
+    onPanResponderMove: Animated.event([null, { moveX: this.animation }]),
+    // onPanResponderMove(event, { moveX }) {
+    //   console.log('MOVE X>>>> ', moveX);
+    // },
 
-    onPanResponderRelease: () => {
+    onPanResponderRelease: (event, gesture) => {
       // cancel? history.goForward(), reverse animation
       // success? finish back animation.
+      // FIXME
+      Animated.timing(this.animation, {
+        toValue: width,
+        duration: 500,
+      }).start(() => {
+        this.isPanning = false;
+        this.setState({
+          previousChildren: null,
+          transition: null,
+        });
+        this.animation = new Animated.Value(0);
+      });
     },
-
   });
 
   componentWillMount() {
@@ -114,23 +124,33 @@ export default class StackTransitioner extends Component {
   }
 
   componentWillReceiveProps(nextProps) {
+    // New route comes in after a swipe gesture begins. Save the children so we
+    // can render both routes during the transition.
+    // Don't trigger the timing animation if user is swiping, let the gesture
+    // control the animation.
+    if (this.isPanning) {
+      if (this.state.previousChildren === null) {
+        this.setState({ previousChildren: this.props.children });
+      }
+      return;
+    }
+    // NOTE: We can't assume that the next location matches any routes in the switch
+    // This means that users will need to wrap the stack in a route component
+    // that stops matching if they need to navigate to a route not contained in
+    // the stack.
+
+    // TODO: Consider a master/detail view with a stack on the left, and a detail
+    // screen on the right.  You want both the stack and the detail to match at the
+    // same time, but you don't necessarily always want the stack to transition.
+    // For example if you are drilling down through categories, you want the
+    // stack to slide transition as you select categories, but then once you
+    // select items you only want the detail to update and not for the stack
+    // to slide.
+    // It seems we may need some prop or url param to tell the stack to not
+    // transition
     const { action } = nextProps.history;
 
     if (
-      // NOTE: We can't assume that the next location matches any routes in the switch
-      // This means that users will need to wrap the stack in a route component
-      // that stops matching if they need to navigate to a route not contained in
-      // the stack.
-
-      // TODO: Consider a master/detail view with a stack on the left, and a detail
-      // screen on the right.  You want both the stack and the detail to match at the
-      // same time, but you don't necessarily always want the stack to transition.
-      // For example if you are drilling down through categories, you want the
-      // stack to slide transition as you select categories, but then once you
-      // select items you only want the detail to update and not for the stack
-      // to slide.
-      // It seems we may need some prop or url param to tell the stack to not
-      // transition
       nextProps.location.key !== this.props.location.key &&
       (action === 'PUSH' || action === 'POP')
     ) {
@@ -174,7 +194,7 @@ export default class StackTransitioner extends Component {
     return (
       <Header
         goBack={this.props.history.goBack}
-        showBack={this.props.history.index > this.startingIndex}
+        showBack={this.props.history.index > this.startingIndex && this.props.history.canGo(-1)}
       />
     );
   }
@@ -197,7 +217,7 @@ export default class StackTransitioner extends Component {
           {children}
         </Animated.View>
       );
-    } else if (transition === 'POP') {
+    } else if (transition === 'POP' || this.isPanning) {
       routes.push(
         <Animated.View style={stackView}>
           {children}
@@ -210,7 +230,7 @@ export default class StackTransitioner extends Component {
       );
     } else {
       return (
-        <View style={stackView}>
+        <View style={stackView} {...this.panResponder.panHandlers}>
           {children}
           {this.renderHeader()}
         </View>
@@ -218,7 +238,7 @@ export default class StackTransitioner extends Component {
     }
 
     return (
-      <View style={stackView}>
+      <View style={stackView} {...this.panResponder.panHandlers}>
         <View style={styles.transitionContainer}>
           {routes[0]}
           {routes[1]}
