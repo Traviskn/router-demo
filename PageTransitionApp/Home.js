@@ -11,6 +11,9 @@ export default function Home() {
       <Link to="/messages">
         <Text style={styles.linkText}>View Messages</Text>
       </Link>
+      <Link to="/nomatch">
+        <Text style={styles.linkText}>Go To Non-Matching Route</Text>
+      </Link>
     </View>
   );
 }

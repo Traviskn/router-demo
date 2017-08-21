@@ -1,11 +1,56 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { Animated, Easing, Dimensions, View } from 'react-native';
+import { Animated, Dimensions, Easing, PanResponder, View } from 'react-native';
+import Header from './Header';
 import styles from './styles';
 
-// TODO: Add PanResponder to enable navigating back by swiping
+// TODO: Add a PanResponder to enable navigating back by swiping
+// Currently we only keep the last child during the transition, and
+// after the transition completes we only render the current match.
+// Investigate if it would make sense to keep the entire route stack. In my
+// experience with other routers, they actually keep rendering the entire stack
+// underneath the current route (componentWillUmount never fires for previous
+// routes for example). history.entries may be all we need though to know which
+// route to navigate back to.
+// - Store the parent/previous routes? Store initial index, check history.index && history.canGo(-1)
+// - onPanStart set this.panning = true
+// - don't animate if this.panning (let user gesture drive animation)
+// - panning only goes back, only enable pan if you can go back
+// - immediately call history.goBack to get both matching routes to animate
+// - onPanRelease determine whether to succeed or cancel
+// - succeed finish the slide animation, set this.panning to false
+// - cancel; call history .goForward(), finish slide animation, set this.panning to false
+// - watch out for race conditions around setting this.panning and the new history location coming in
 
-// TODO: Add option for a persistent header between routes on the stack
+/**
+ * The max duration of the card animation in milliseconds after released gesture.
+ * The actual duration should be always less then that because the rest distance
+ * is always less then the full distance of the layout.
+ */
+const ANIMATION_DURATION = 500;
+
+/**
+ * The gesture distance threshold to trigger the back behavior. For instance,
+ * `1/2` means that moving greater than 1/2 of the width of the screen will
+ * trigger a back action
+ */
+const POSITION_THRESHOLD = 1 / 2;
+
+/**
+ * The threshold (in pixels) to start the gesture action.
+ */
+const RESPOND_THRESHOLD = 20;
+
+/**
+ * The distance of touch start from the edge of the screen where the gesture will be recognized
+ */
+const GESTURE_RESPONSE_DISTANCE_HORIZONTAL = 25;
+const GESTURE_RESPONSE_DISTANCE_VERTICAL = 135;
+
+// TODO: Add more header configuration options
+// - title
+// - right/left button
+// - Allow rendering a custom header
 
 // FIXME: Width could change on rotation
 // width could depend on the layout of the parent view
@@ -25,13 +70,73 @@ export default class StackTransitioner extends Component {
 
   state = {
     previousChildren: null,
-    animation: new Animated.Value(0),
     transition: null,
   };
 
+  startingIndex = null;
+
+  animation = new Animated.Value(0);
+
+  isPanning = false;
+
+  panResponder = PanResponder.create({
+    onMoveShouldSetPanResponderCapture: () => {
+      // only capture touches that started near the edge of the screen.
+      // for future animation types like modal or slide-vertical, also
+      // detect the direction of the gesture.
+      return false;
+    },
+
+    onMoveShouldSetPanResponder: () => {
+      // this or the 'Capture' version?
+    },
+
+    onPanResponderGrant: () => {
+      // history.pop()
+      // save children
+    },
+
+    onPanResponderMove: () => {
+      // Animated.Event?
+      // use I18nManager.isRTL to determine which side of the screen to measure
+      // from.
+    },
+
+    onPanResponderRelease: () => {
+      // cancel? history.goForward(), reverse animation
+      // success? finish back animation.
+    },
+
+  });
+
+  componentWillMount() {
+    this.startingIndex = this.props.history.index;
+  }
+
   componentWillReceiveProps(nextProps) {
-    if (nextProps.location.key !== this.props.location.key) {
-      const { action } = nextProps.history;
+    const { action } = nextProps.history;
+
+    if (
+      // NOTE: We can't assume that the next location matches any routes in the switch
+      // This means that users will need to wrap the stack in a route component
+      // that stops matching if they need to navigate to a route not contained in
+      // the stack.
+
+      // TODO: Consider a master/detail view with a stack on the left, and a detail
+      // screen on the right.  You want both the stack and the detail to match at the
+      // same time, but you don't necessarily always want the stack to transition.
+      // For example if you are drilling down through categories, you want the
+      // stack to slide transition as you select categories, but then once you
+      // select items you only want the detail to update and not for the stack
+      // to slide.
+      // It seems we may need some prop or url param to tell the stack to not
+      // transition
+      nextProps.location.key !== this.props.location.key &&
+      (action === 'PUSH' || action === 'POP')
+    ) {
+      if (action === 'POP' && nextProps.history.index < this.startingIndex) {
+        return;
+      }
 
       this.setState(
         {
@@ -40,13 +145,14 @@ export default class StackTransitioner extends Component {
         },
         () => {
           // TODO: add more animation options and make animation configurable
-          // - default to platform default (slide ios, fade android)
-          // - base default slide direction on `I18nManager.isRTL`
+          // - default based on platform (slide ios, fade android)
+          // - base slide direction on `I18nManager.isRTL`
           // - fade in from bottom/top
           // - fade out to bottom/top
           // - slide in from bottom/top
           // - slide out to bottom/top
-          Animated.timing(this.state.animation, {
+          // - cube transition
+          Animated.timing(this.animation, {
             duration: 500,
             toValue: action === 'PUSH' ? -width : width,
             easing: Easing.bezier(0.2833, 0.99, 0.31833, 0.99),
@@ -55,18 +161,29 @@ export default class StackTransitioner extends Component {
             this.setState({
               previousChildren: null,
               transition: null,
-              animation: new Animated.Value(0),
             });
+
+            this.animation = new Animated.Value(0);
           });
         }
       );
     }
   }
 
+  renderHeader() {
+    return (
+      <Header
+        goBack={this.props.history.goBack}
+        showBack={this.props.history.index > this.startingIndex}
+      />
+    );
+  }
+
   render() {
     const { children } = this.props;
-    const { previousChildren, animation, transition } = this.state;
+    const { previousChildren, transition } = this.state;
     const { stackView } = styles;
+    const transform = { transform: [{ translateX: this.animation }] };
 
     let routes = [];
     if (transition === 'PUSH') {
@@ -76,7 +193,7 @@ export default class StackTransitioner extends Component {
         </Animated.View>
       );
       routes.push(
-        <Animated.View style={[stackView, offscreen, { transform: [{ translateX: animation }] }]}>
+        <Animated.View style={[stackView, offscreen, transform]}>
           {children}
         </Animated.View>
       );
@@ -87,7 +204,7 @@ export default class StackTransitioner extends Component {
         </Animated.View>
       );
       routes.push(
-        <Animated.View style={[stackView, { transform: [{ translateX: animation }] }]}>
+        <Animated.View style={[stackView, transform]}>
           {previousChildren}
         </Animated.View>
       );
@@ -95,14 +212,18 @@ export default class StackTransitioner extends Component {
       return (
         <View style={stackView}>
           {children}
+          {this.renderHeader()}
         </View>
       );
     }
 
     return (
       <View style={stackView}>
-        {routes[0]}
-        {routes[1]}
+        <View style={styles.transitionContainer}>
+          {routes[0]}
+          {routes[1]}
+        </View>
+        {this.renderHeader()}
       </View>
     );
   }
