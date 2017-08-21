@@ -96,10 +96,11 @@ export default class StackTransitioner extends Component {
       // save children
     },
 
-    onPanResponderMove: Animated.event([null, { moveX: this.animation }]),
-    // onPanResponderMove(event, { moveX }) {
-    //   console.log('MOVE X>>>> ', moveX);
-    // },
+    // No idea why this Animated.event isn't working...
+    // onPanResponderMove: Animated.event([null, { moveX: this.animation }]),
+    onPanResponderMove: (event, { moveX }) => {
+      this.animation.setValue(moveX);
+    },
 
     onPanResponderRelease: (event, gesture) => {
       // cancel? history.goForward(), reverse animation
@@ -107,7 +108,7 @@ export default class StackTransitioner extends Component {
       // FIXME
       Animated.timing(this.animation, {
         toValue: width,
-        duration: 500,
+        duration: 250,
       }).start(() => {
         this.isPanning = false;
         this.setState({
