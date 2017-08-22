@@ -10,8 +10,10 @@ import styles from './styles';
 // Investigate if it would make sense to keep the entire route stack. In my
 // experience with other routers, they actually keep rendering the entire stack
 // underneath the current route (componentWillUmount never fires for previous
-// routes for example). history.entries may be all we need though to know which
-// route to navigate back to.
+// routes for example). A multi step form/wizard interface is a good example of
+// not wanting the previous screens to unmount, although you could work-around
+// with something like Redux. history.entries may be all we need though to know
+// which route to navigate back to.
 // - Store the parent/previous routes? Store initial index, check history.index && history.canGo(-1)
 // - onPanStart set this.panning = true
 // - don't animate if this.panning (let user gesture drive animation)
@@ -39,12 +41,12 @@ const POSITION_THRESHOLD = 1 / 2;
 /**
  * The threshold (in pixels) to start the gesture action.
  */
-const RESPOND_THRESHOLD = 20;
+const RESPOND_THRESHOLD = 1;
 
 /**
  * The distance of touch start from the edge of the screen where the gesture will be recognized
  */
-const GESTURE_RESPONSE_DISTANCE_HORIZONTAL = 25;
+const GESTURE_RESPONSE_DISTANCE_HORIZONTAL = 40;
 const GESTURE_RESPONSE_DISTANCE_VERTICAL = 135;
 
 // TODO: Add more header configuration options
@@ -81,7 +83,7 @@ export default class StackTransitioner extends Component {
   isPanning = false;
 
   panResponder = PanResponder.create({
-    onMoveShouldSetPanResponderCapture: (event, gesture) => {
+    onMoveShouldSetPanResponder: (event, gesture) => {
       return (
         this.props.history.index > this.startingIndex &&
         this.props.history.canGo(-1) &&
@@ -90,10 +92,9 @@ export default class StackTransitioner extends Component {
       );
     },
 
-    onPanResponderGrant: () => {
+    onPanResponderGrant: (event, { moveX }) => {
       this.isPanning = true;
       this.props.history.goBack();
-      // save children
     },
 
     // No idea why this Animated.event isn't working...
@@ -102,23 +103,55 @@ export default class StackTransitioner extends Component {
       this.animation.setValue(moveX);
     },
 
-    onPanResponderRelease: (event, gesture) => {
-      // cancel? history.goForward(), reverse animation
-      // success? finish back animation.
-      // FIXME
-      Animated.timing(this.animation, {
-        toValue: width,
-        duration: 250,
-      }).start(() => {
-        this.isPanning = false;
-        this.setState({
-          previousChildren: null,
-          transition: null,
-        });
-        this.animation = new Animated.Value(0);
-      });
+    onPanResponderRelease: (event, { dx, vx }) => {
+      const defaultVelocity = width / ANIMATION_DURATION;
+      const velocity = Math.max(Math.abs(vx), defaultVelocity);
+      const resetDuration = dx / velocity;
+      const goBackDuration = (width - dx) / velocity;
+
+      // first check for significant gesture velocity as signal of intent
+      if (vx < -0.5) {
+        this.cancelPan(resetDuration);
+      }
+      if (vx > 0.5) {
+        this.finishPan(goBackDuration);
+      }
+
+      // next check position to determine intent
+      if (dx / width < POSITION_THRESHOLD) {
+        this.cancelPan(resetDuration);
+      } else {
+        this.finishPan(goBackDuration);
+      }
     },
   });
+
+  cancelPan = duration => {
+    this.props.history.goForward();
+
+    Animated.timing(this.animation, {
+      toValue: 0,
+      duration,
+      useNativeDriver: true,
+    }).start(this.afterPan);
+  };
+
+  finishPan = duration => {
+    Animated.timing(this.animation, {
+      toValue: width,
+      duration,
+      useNativeDriver: true,
+    }).start(this.afterPan);
+  };
+
+  afterPan = () => {
+    this.isPanning = false;
+    this.setState({
+      previousChildren: null,
+      transition: null,
+    });
+    this.animation = new Animated.Value(0);
+  };
 
   componentWillMount() {
     this.startingIndex = this.props.history.index;
@@ -174,7 +207,7 @@ export default class StackTransitioner extends Component {
           // - slide out to bottom/top
           // - cube transition
           Animated.timing(this.animation, {
-            duration: 500,
+            duration: ANIMATION_DURATION,
             toValue: action === 'PUSH' ? -width : width,
             easing: Easing.bezier(0.2833, 0.99, 0.31833, 0.99),
             useNativeDriver: true,
@@ -192,6 +225,8 @@ export default class StackTransitioner extends Component {
   }
 
   renderHeader() {
+    // FIXME: the header changes immediately, even while animating/panning
+    // header should animate along with the rest of the stack
     return (
       <Header
         goBack={this.props.history.goBack}
