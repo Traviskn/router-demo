@@ -184,6 +184,8 @@ export default class StackTransitioner extends Component {
       <Header
         goBack={this.props.history.goBack}
         showBack={this.props.history.index > this.startingIndex && this.props.history.canGo(-1)}
+        transition={this.state.transition}
+        isPanning={this.isPanning}
       />
     );
   }
