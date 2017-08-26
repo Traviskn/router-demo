@@ -23,7 +23,7 @@ export default StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     left: 0,
     right: 0,
     height: HEADER_HEIGHT + STATUSBAR_HEIGHT,
@@ -34,5 +34,17 @@ export default StyleSheet.create({
   animatingHeader: {
     position: 'absolute',
     top: 0,
+  },
+  left: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  title: {
+    flex: 2,
+    alignItems: 'center',
+  },
+  right: {
+    flex: 1,
+    alignItems: 'center',
   },
 });

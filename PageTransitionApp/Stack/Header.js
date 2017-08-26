@@ -41,7 +41,6 @@ export default class Header extends Component {
     } = this.props;
 
     if (transition || isPanning) {
-      console.log('HEADER TRANSITION');
       const thisHeader = (
         <Animated.View
           style={[
@@ -54,12 +53,20 @@ export default class Header extends Component {
               }),
             },
           ]}>
-          {showBack &&
-            <TouchableHighlight onPress={goBack}>
-              <Text style={styles.backText}>&lt;</Text>
-            </TouchableHighlight>}
+          <View style={styles.left}>
+            {showBack &&
+              <TouchableHighlight onPress={goBack}>
+                <Text style={styles.backText}>&lt;</Text>
+              </TouchableHighlight>}
+          </View>
 
-          <Text>HEADER</Text>
+          <View style={styles.title}>
+            <Text numberOfLines={1}>HEADER</Text>
+          </View>
+
+          <View style={styles.right}>
+            <Text>RIGHT</Text>
+          </View>
         </Animated.View>
       );
 
@@ -75,12 +82,20 @@ export default class Header extends Component {
               }),
             },
           ]}>
-          {this.state.previousShowBack &&
-            <TouchableHighlight>
-              <Text style={styles.backText}>&lt;</Text>
-            </TouchableHighlight>}
+          <View style={styles.left}>
+            {this.state.previousShowBack &&
+              <TouchableHighlight>
+                <Text style={styles.backText}>&lt;</Text>
+              </TouchableHighlight>}
+          </View>
 
-          <Text>HEADER</Text>
+          <View style={styles.title}>
+            <Text numberOfLines={1}>HEADER</Text>
+          </View>
+
+          <View style={styles.right}>
+            <Text>RIGHT</Text>
+          </View>
         </Animated.View>
       );
 
@@ -104,12 +119,20 @@ export default class Header extends Component {
 
     return (
       <View style={styles.header}>
-        {showBack &&
-          <TouchableHighlight onPress={goBack}>
-            <Text style={styles.backText}>&lt;</Text>
-          </TouchableHighlight>}
+        <View style={styles.left}>
+          {showBack &&
+            <TouchableHighlight onPress={goBack}>
+              <Text style={styles.backText}>&lt;</Text>
+            </TouchableHighlight>}
+        </View>
 
-        <Text>HEADER</Text>
+        <View style={styles.title}>
+          <Text numberOfLines={1}>HEADER</Text>
+        </View>
+
+        <View style={styles.right}>
+          <Text>RIGHT</Text>
+        </View>
       </View>
     );
   }
