@@ -6,11 +6,11 @@ const STATUSBAR_HEIGHT = Platform.OS === 'ios' ? 20 : 0;
 export default StyleSheet.create({
   stackView: {
     position: 'absolute',
+    flexDirection: 'column-reverse',
     left: 0,
     right: 0,
     bottom: 0,
     top: 0,
-    flexDirection: 'column-reverse',
     backgroundColor: 'white',
     shadowColor: 'black',
     shadowOpacity: 0.2,
@@ -21,14 +21,18 @@ export default StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
     left: 0,
     right: 0,
     height: HEADER_HEIGHT + STATUSBAR_HEIGHT,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
     backgroundColor: 'grey',
     borderBottomWidth: 1,
     borderBottomColor: 'black',
+  },
+  animatingHeader: {
+    position: 'absolute',
+    top: 0,
   },
 });

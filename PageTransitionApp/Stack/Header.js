@@ -12,42 +12,48 @@ export default class Header extends Component {
   static propTypes = {
     goBack: PropTypes.func,
     showBack: PropTypes.bool,
+    animation: PropTypes.instanceOf(Animated.Value),
+    animationMax: PropTypes.number,
+    animationMin: PropTypes.number,
+    transition: PropTypes.string,
+    isPanning: PropTypes.bool,
   };
 
   state = {
-    previousProps: null,
+    previousShowBack: false,
   };
 
-  animation = new Animated.Value(0);
-
   componentWillReceiveProps(nextProps) {
-    if (nextProps.transition || nextProps.isPanning) {
-      this.setState(
-        {
-          previousProps: this.props,
-        },
-        () => {
-          Animated.timing(this.animation, {
-            duration: 500,
-            toValue: 1,
-            useNativeDriver: true,
-          }).start(() => {
-            this.animation = new Animated.Value(0);
-          });
-        }
-      );
-    } else {
-      this.setState({ previousProps: null });
-    }
+    this.setState({
+      previousShowBack: this.props.showBack,
+    });
   }
 
   render() {
-    const { goBack, showBack, transition } = this.props;
-    const { previousProps } = this.state;
+    const {
+      animation,
+      animationMax,
+      animationMin,
+      goBack,
+      isPanning,
+      showBack,
+      transition,
+    } = this.props;
 
-    if (this.state.previousProps) {
+    if (transition || isPanning) {
+      console.log('HEADER TRANSITION');
       const thisHeader = (
-        <Animated.View style={[styles.header, { position: 'absolute', top: 0, right: 0, left: 0, opacity: this.animation }]}>
+        <Animated.View
+          style={[
+            styles.header,
+            styles.animatingHeader,
+            {
+              opacity: animation.interpolate({
+                inputRange: [animationMin, 0, animationMax],
+                outputRange: [1, 0, 1],
+              }),
+            },
+          ]}>
           {showBack &&
             <TouchableHighlight onPress={goBack}>
               <Text style={styles.backText}>&lt;</Text>
@@ -61,18 +67,15 @@ export default class Header extends Component {
         <Animated.View
           style={[
             styles.header,
+            styles.animatingHeader,
             {
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              left: 0,
-              opacity: this.animation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 0],
+              opacity: animation.interpolate({
+                inputRange: [animationMin, 0, animationMax],
+                outputRange: [0, 1, 0],
               }),
             },
           ]}>
-          {previousProps.showBack &&
+          {this.state.previousShowBack &&
             <TouchableHighlight>
               <Text style={styles.backText}>&lt;</Text>
             </TouchableHighlight>}
@@ -86,6 +89,7 @@ export default class Header extends Component {
         headers.push(previousHeader);
         headers.push(thisHeader);
       } else {
+        // POP and panning cases
         headers.push(thisHeader);
         headers.push(previousHeader);
       }

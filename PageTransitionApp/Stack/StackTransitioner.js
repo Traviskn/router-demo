@@ -56,24 +56,25 @@ export default class StackTransitioner extends Component {
       const resetDuration = dx / velocity;
       const goBackDuration = (this.props.width - dx) / velocity;
 
-      // first check for significant gesture velocity as signal of intent
+      // first check velocity to decide whether to cancel or not
       if (vx < -0.5) {
-        this.cancelPan(resetDuration);
-      }
-      if (vx > 0.5) {
-        this.finishPan(goBackDuration);
+        this.cancelNavigation(resetDuration);
+        return;
+      } else if (vx > 0.5) {
+        this.finishNavigation(goBackDuration);
+        return;
       }
 
-      // next check position to determine intent
+      // next use position to decide whether to cancel or not
       if (dx / this.props.width < POSITION_THRESHOLD) {
-        this.cancelPan(resetDuration);
+        this.cancelNavigation(resetDuration);
       } else {
-        this.finishPan(goBackDuration);
+        this.finishNavigation(goBackDuration);
       }
     },
   });
 
-  cancelPan = duration => {
+  cancelNavigation = duration => {
     this.props.history.goForward();
 
     Animated.timing(this.animation, {
@@ -83,7 +84,7 @@ export default class StackTransitioner extends Component {
     }).start(this.afterPan);
   };
 
-  finishPan = duration => {
+  finishNavigation = duration => {
     Animated.timing(this.animation, {
       toValue: this.props.width,
       duration,
@@ -173,9 +174,6 @@ export default class StackTransitioner extends Component {
   }
 
   renderHeader() {
-    // FIXME: the header changes immediately, even while animating/panning
-    // header should animate along with the rest of the stack
-
     // TODO: Add more header configuration options
     // - title
     // - right/left button
@@ -184,6 +182,9 @@ export default class StackTransitioner extends Component {
       <Header
         goBack={this.props.history.goBack}
         showBack={this.props.history.index > this.startingIndex && this.props.history.canGo(-1)}
+        animation={this.animation}
+        animationMax={this.props.width}
+        animationMin={-this.props.width}
         transition={this.state.transition}
         isPanning={this.isPanning}
       />
